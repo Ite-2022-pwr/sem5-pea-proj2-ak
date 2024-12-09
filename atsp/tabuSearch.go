@@ -2,7 +2,6 @@ package atsp
 
 import (
 	"math"
-	"math/rand"
 	"pea2/graph"
 )
 
@@ -40,19 +39,9 @@ func NewTabuSearchSolver(G graph.Graph, tenure, maxIterations int, moving Moving
 }
 
 func (ts *TabuSearchSolver) generateInitialPermutation(startVertex int) []int {
-	path := make([]int, ts.graph.GetVerticesCount())
-	for i := 0; i < ts.graph.GetVerticesCount(); i++ {
-		path[i] = i
-	}
-
-	path[startVertex], path[0] = path[0], path[startVertex]
-
-	for i := 1; i < ts.graph.GetVerticesCount(); i++ {
-		randIdx := rand.Intn(ts.graph.GetVerticesCount()-1) + 1
-		path[i], path[randIdx] = path[randIdx], path[i]
-	}
-
-	return path
+	greedySolver := NewGreedySolver(ts.graph)
+	_, perm := greedySolver.Solve(startVertex)
+	return perm
 }
 
 func (ts *TabuSearchSolver) GetGraph() graph.Graph {
@@ -109,9 +98,6 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 		// Generowanie sąsiedztwa
 		for i := 1; i < ts.graph.GetVerticesCount(); i++ {
 			for j := i + 1; j < ts.graph.GetVerticesCount(); j++ {
-				if ts.isTabu(i, j, iteration) {
-					continue
-				}
 
 				neighbor := []int{}
 				if ts.moving == MovingSwap {
@@ -120,6 +106,15 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 					neighbor = insert(currentPath, i, j)
 				}
 				neighborCost := ts.graph.CalculatePathCost(neighbor)
+
+				if neighborCost < bestCost {
+					copy(bestPath, neighbor)
+					bestCost = neighborCost
+				}
+
+				if ts.isTabu(i, j, iteration) {
+					continue
+				}
 
 				if neighborCost < bestNeighborCost {
 					bestNeighbor = neighbor
