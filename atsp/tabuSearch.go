@@ -90,6 +90,7 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 	currentPath := ts.generateInitialPermutation(startVertex)
 	bestPath := append([]int{}, currentPath...)
 	bestCost := ts.graph.CalculatePathCost(bestPath)
+	lastChangeIteration := 0
 
 	for iteration := 0; iteration < ts.maxIterations; iteration++ {
 		bestNeighbor := []int{}
@@ -101,7 +102,7 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 
 				neighbor := []int{}
 				if ts.moving == MovingSwap {
-					neighbor = swap(currentPath, i, i)
+					neighbor = swap(currentPath, i, j)
 				} else {
 					neighbor = insert(currentPath, i, j)
 				}
@@ -112,11 +113,7 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 					bestCost = neighborCost
 				}
 
-				if ts.isTabu(i, j, iteration) {
-					continue
-				}
-
-				if neighborCost < bestNeighborCost {
+				if !ts.isTabu(i, j, iteration) && neighborCost < bestNeighborCost {
 					bestNeighbor = neighbor
 					bestNeighborCost = neighborCost
 				}
@@ -126,6 +123,7 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 		if bestNeighborCost < bestCost {
 			copy(bestPath, bestNeighbor)
 			bestCost = bestNeighborCost
+			lastChangeIteration = iteration
 		}
 
 		// Aktualizacja listy ruchów zakazanych
@@ -138,6 +136,11 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 		}
 
 		copy(currentPath, bestNeighbor)
+
+		//if float64(iteration)/float64(ts.maxIterations) > 0.5 &&
+		//	(float64(iteration)-float64(lastChangeIteration))/float64(ts.maxIterations) > 0.2 {
+		//	break
+		//}
 	}
 
 	return bestCost, bestPath

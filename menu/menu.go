@@ -10,8 +10,24 @@ import (
 	"pea2/utils"
 )
 
+type TabuOpts struct {
+	Tenure        int
+	MaxIterations int
+	MoveType      atsp.MovingMethod
+}
+
+type AnnealingOpts struct {
+	CoolingRate        float64
+	Epochs             int
+	MinimalTemperature float64
+	InitialTemperature float64
+}
+
 type Options struct {
 	Graph graph.Graph
+
+	Tabu      TabuOpts
+	Annealing AnnealingOpts
 }
 
 var opts = Options{}
@@ -39,8 +55,12 @@ func RunMenu() {
 			RunAlgorithm()
 		case 4:
 			GenerateGraph()
+		case 5:
+			SetTabuOptions()
+		case 6:
+			SetSimulatedAnnealingOptions()
 		default:
-			log.Println(utils.RedColor("[!!] Tylko opcje 0-3"))
+			log.Println(utils.RedColor("[!!] Tylko opcje 0-6"))
 		}
 	}
 }
@@ -52,6 +72,8 @@ func PrintOptions() {
 	fmt.Println("2. Wyświetl graf")
 	fmt.Println("3. Wykonaj algorytm rozwiązywania ATSP")
 	fmt.Println("4. Wygeneruj graf")
+	fmt.Println("5. Ustaw parametry Tabu Search")
+	fmt.Println("6. Ustaw parametry Simulated Annealing")
 	fmt.Print("> ")
 }
 
@@ -78,6 +100,7 @@ func RunAlgorithm() {
 
 	fmt.Println("Wybierz algorytm:")
 	fmt.Println("0. Tabu Search")
+	fmt.Println("1. Simulated Annealing")
 	fmt.Print("> ")
 
 	var choice int
@@ -90,13 +113,89 @@ func RunAlgorithm() {
 	}
 	switch choice {
 	case 0:
-		tsp, prompt = atsp.NewTabuSearchSolver(opts.Graph, 7, opts.Graph.GetVerticesCount()*100, atsp.MovingInsert), "Tabu Search"
+		tsp, prompt = atsp.NewTabuSearchSolver(opts.Graph, opts.Tabu.Tenure, opts.Tabu.MaxIterations, opts.Tabu.MoveType), fmt.Sprintf("Tabu Search (%v)", opts.Tabu)
+	case 1:
+		tsp, prompt = atsp.NewSimulatedAnnealingSolver(opts.Graph, opts.Annealing.CoolingRate, opts.Annealing.MinimalTemperature, opts.Annealing.InitialTemperature, opts.Annealing.Epochs), fmt.Sprintf("Simulated Annealing (%v)", opts.Annealing)
 	default:
 		log.Println(utils.RedColor("[!!] Tylko opcje 0-2"))
 		return
 	}
 
 	benchmark.MeasureSolveTime(tsp, prompt)
+}
+
+func SetTabuOptions() {
+	fmt.Println("Ustawianie opcji dla Tabu Search")
+	fmt.Print("Podaj kadencję: ")
+	var tenure int
+	if _, err := fmt.Scanln(&tenure); err != nil {
+		log.Println(utils.RedColor(err))
+		return
+	}
+
+	fmt.Print("Podaj liczbę iteracji: ")
+	var maxIter int
+	if _, err := fmt.Scanln(&maxIter); err != nil {
+		log.Println(utils.RedColor(err))
+		return
+	}
+
+	fmt.Println("Wybierz typ ruchu:")
+	fmt.Println("0. swap")
+	fmt.Println("1. insert")
+	fmt.Print("> ")
+	var choice int
+	if _, err := fmt.Scanln(&choice); err != nil {
+		log.Println(utils.RedColor(err))
+		return
+	}
+
+	var moveType atsp.MovingMethod
+	switch choice {
+	case 0:
+		moveType = atsp.MovingSwap
+	case 1:
+		moveType = atsp.MovingInsert
+	default:
+		log.Println(utils.RedColor("[!!] Tylko opcje 0-1"))
+		return
+	}
+
+	opts.Tabu = TabuOpts{Tenure: tenure, MaxIterations: maxIter, MoveType: moveType}
+
+}
+
+func SetSimulatedAnnealingOptions() {
+	fmt.Println("Ustawianie opcji dla Simulated Annealing")
+	fmt.Print("Podaj współczynnik chłodzenia (alfa): ")
+	var coolingRate float64
+	if _, err := fmt.Scanln(&coolingRate); err != nil {
+		log.Println(utils.RedColor(err))
+		return
+	}
+
+	fmt.Print("Podaj liczbę epok: ")
+	var epochs int
+	if _, err := fmt.Scanln(&epochs); err != nil {
+		log.Println(utils.RedColor(err))
+		return
+	}
+
+	fmt.Print("Podaj minimalną temperaturę: ")
+	var minTemp float64
+	if _, err := fmt.Scanln(&minTemp); err != nil {
+		log.Println(utils.RedColor(err))
+		return
+	}
+
+	fmt.Print("Podaj początkową temperaturę: ")
+	var initTemp float64
+	if _, err := fmt.Scanln(&initTemp); err != nil {
+		log.Println(utils.RedColor(err))
+		return
+	}
+
+	opts.Annealing = AnnealingOpts{CoolingRate: coolingRate, Epochs: epochs, MinimalTemperature: minTemp, InitialTemperature: initTemp}
 }
 
 func GenerateGraph() {
