@@ -1,9 +1,16 @@
 package main
 
-import "pea2/menu"
+import "pea2/benchmark"
 
 func main() {
-	menu.RunMenu()
-	//benchmark.BruteForce()
-	//benchmark.All()
+	//menu.RunMenu()
+
+	//benchmark.TestSimulatedAnnealingInitialTemperatures()
+	//benchmark.TestSimulatedAnnealingMinimalTemperatures()
+	//benchmark.TestSimulatedAnnealingEpochs()
+	//benchmark.TestSimulatedAnnealingCoolingRates()
+
+	benchmark.TestTabuSearchIterations()
+	benchmark.TestTabuSearchMoveTypes()
+	benchmark.TestTabuSearchTenures()
 }

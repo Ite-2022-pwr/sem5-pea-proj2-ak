@@ -1,8 +1,8 @@
 package atsp
 
 import (
-	"math"
 	"pea2/graph"
+	"pea2/utils"
 )
 
 type MovingMethod int
@@ -12,9 +12,15 @@ const (
 	MovingInsert MovingMethod = iota
 )
 
-type TabuElement struct {
+type Move struct {
 	Vertex1 int
 	Vertex2 int
+}
+
+type Neighbor struct {
+	Path []int
+	Cost int
+	Move Move
 }
 
 type TabuSearchSolver struct {
@@ -25,7 +31,7 @@ type TabuSearchSolver struct {
 	moving        MovingMethod
 	bestPath      []int
 	bestCost      int
-	tabuList      map[TabuElement]int
+	tabuList      map[Move]int
 }
 
 func NewTabuSearchSolver(G graph.Graph, tenure, maxIterations int, moving MovingMethod) *TabuSearchSolver {
@@ -34,7 +40,7 @@ func NewTabuSearchSolver(G graph.Graph, tenure, maxIterations int, moving Moving
 		tabuTenure:    tenure,
 		maxIterations: maxIterations,
 		moving:        moving,
-		tabuList:      make(map[TabuElement]int),
+		tabuList:      make(map[Move]int),
 	}
 }
 
@@ -60,24 +66,30 @@ func swap(path []int, i, j int) []int {
 }
 
 func insert(path []int, i, j int) []int {
-	newPath := make([]int, 0, len(path))
-	for k := 0; k < len(path); k++ {
-		if k == i {
-			continue
-		}
-
-		if k == j {
-			newPath = append(newPath, path[i])
-		}
-		newPath = append(newPath, path[k])
+	newPath := append([]int{}, path...)
+	for k := j; k > i; k-- {
+		newPath[k] = newPath[k-1]
 	}
+	newPath[i] = path[j]
 	return newPath
 }
 
+//func (ts *TabuSearchSolver) isTabu(i, j, iter int) bool {
+//	if tabu, ok := ts.tabuList[Move{i, j}]; ok {
+//		if tabu < iter {
+//			delete(ts.tabuList, Move{i, j})
+//			return false
+//		} else {
+//			return true
+//		}
+//	}
+//	return false
+//}
+
 func (ts *TabuSearchSolver) isTabu(i, j, iter int) bool {
-	if tabu, ok := ts.tabuList[TabuElement{i, j}]; ok {
+	if tabu, ok := ts.tabuList[Move{i, j}]; ok {
 		if tabu < iter {
-			delete(ts.tabuList, TabuElement{i, j})
+			delete(ts.tabuList, Move{i, j})
 			return false
 		} else {
 			return true
@@ -90,11 +102,10 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 	currentPath := ts.generateInitialPermutation(startVertex)
 	bestPath := append([]int{}, currentPath...)
 	bestCost := ts.graph.CalculatePathCost(bestPath)
-	lastChangeIteration := 0
+	currentCost := bestCost
 
 	for iteration := 0; iteration < ts.maxIterations; iteration++ {
-		bestNeighbor := []int{}
-		bestNeighborCost := math.MaxInt
+		neighbors := utils.NewPriorityQueue(func(a, b Neighbor) bool { return a.Cost < b.Cost })
 
 		// Generowanie sąsiedztwa
 		for i := 1; i < ts.graph.GetVerticesCount(); i++ {
@@ -108,39 +119,31 @@ func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 				}
 				neighborCost := ts.graph.CalculatePathCost(neighbor)
 
-				if neighborCost < bestCost {
-					copy(bestPath, neighbor)
-					bestCost = neighborCost
-				}
-
-				if !ts.isTabu(i, j, iteration) && neighborCost < bestNeighborCost {
-					bestNeighbor = neighbor
-					bestNeighborCost = neighborCost
-				}
+				neighbors.Push(Neighbor{Path: neighbor, Cost: neighborCost, Move: Move{currentPath[i], currentPath[j]}})
 			}
 		}
 
-		if bestNeighborCost < bestCost {
-			copy(bestPath, bestNeighbor)
-			bestCost = bestNeighborCost
-			lastChangeIteration = iteration
-		}
+		moved := false
+		for !neighbors.IsEmpty() {
+			neighbor := neighbors.Pop()
 
-		// Aktualizacja listy ruchów zakazanych
-		for i := 0; i < ts.graph.GetVerticesCount(); i++ {
-			for j := i + 1; j < ts.graph.GetVerticesCount(); j++ {
-				if currentPath[i] != bestPath[i] && currentPath[j] != bestPath[j] {
-					ts.tabuList[TabuElement{i, j}] = iteration + ts.tabuTenure
-				}
+			if !ts.isTabu(neighbor.Move.Vertex1, neighbor.Move.Vertex2, iteration) || neighbor.Cost < bestCost {
+				currentPath = neighbor.Path
+				currentCost = neighbor.Cost
+				ts.tabuList[neighbor.Move] = iteration + ts.tabuTenure
+				moved = true
+				break
 			}
 		}
 
-		copy(currentPath, bestNeighbor)
+		if moved && currentCost < bestCost {
+			copy(bestPath, currentPath)
+			bestCost = currentCost
+		}
 
-		//if float64(iteration)/float64(ts.maxIterations) > 0.5 &&
-		//	(float64(iteration)-float64(lastChangeIteration))/float64(ts.maxIterations) > 0.2 {
-		//	break
-		//}
+		if !moved || iteration%100 == 0 {
+			utils.Shuffle(currentPath)
+		}
 	}
 
 	return bestCost, bestPath
