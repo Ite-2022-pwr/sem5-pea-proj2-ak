@@ -101,3 +101,27 @@ func TestTabuSearchTenures() {
 		}
 	}
 }
+
+func TestTabuSearchBestParams() {
+	prompt := "Tabu Search"
+
+	for filename, optimalCost := range OptimalSolutions {
+		G, err := utils.ReadGraphFromFile(filepath.Join(InputDirectory, filename))
+		if err != nil {
+			log.Fatal(utils.RedColor(err))
+		}
+
+		var result [][]string
+		for r := 0; r < Rounds; r++ {
+			log.Println(utils.BlueColor(fmt.Sprintf("TS best, test: %d/%d", r+1, Rounds)))
+			tsp := atsp.NewTabuSearchSolver(G, 20, 1000, atsp.MovingInsert)
+			elapsed, cost := MeasureSolveTimeWithCost(tsp, prompt)
+			result = append(result, []string{
+				fmt.Sprintf("%d", cost),
+				fmt.Sprintf("%d", CalculateError(cost, optimalCost)),
+				fmt.Sprintf("%.3f", elapsed/1000000000.0),
+			})
+			utils.SaveCSV(filepath.Join(OutputDirectory, fmt.Sprintf("TS_CR_%v_best.csv", filename)), result)
+		}
+	}
+}

@@ -8,15 +8,17 @@ import (
 type MovingMethod int
 
 const (
-	MovingSwap   MovingMethod = iota
-	MovingInsert MovingMethod = iota
+	MovingSwap   MovingMethod = iota // typ ruchu swap
+	MovingInsert MovingMethod = iota // typ ruchu insert
 )
 
+// Move to struktura danych reprezentująca wykonany ruch
 type Move struct {
 	Vertex1 int
 	Vertex2 int
 }
 
+// Neighbor to struktura danych reprezentująca wygenerowanego sąsiaaa
 type Neighbor struct {
 	Path []int
 	Cost int
@@ -29,8 +31,6 @@ type TabuSearchSolver struct {
 	tabuTenure    int
 	maxIterations int
 	moving        MovingMethod
-	bestPath      []int
-	bestCost      int
 	tabuList      map[Move]int
 }
 
@@ -44,6 +44,7 @@ func NewTabuSearchSolver(G graph.Graph, tenure, maxIterations int, moving Moving
 	}
 }
 
+// generateInitialPermutation generuje początkowe rozwiązanie algorytmem zachłannym
 func (ts *TabuSearchSolver) generateInitialPermutation(startVertex int) []int {
 	greedySolver := NewGreedySolver(ts.graph)
 	_, perm := greedySolver.Solve(startVertex)
@@ -58,6 +59,7 @@ func (ts *TabuSearchSolver) Solve(startVertex int) (int, []int) {
 	return ts.TabuSearch(startVertex)
 }
 
+// swap zamienia 2 wierzchołki miejscami
 func swap(path []int, i, j int) []int {
 	newPath := make([]int, len(path))
 	copy(newPath, path)
@@ -65,6 +67,7 @@ func swap(path []int, i, j int) []int {
 	return newPath
 }
 
+// insert wstawia wierchołek path[j] w miejsce path[i] przesuwając segment ścieżki
 func insert(path []int, i, j int) []int {
 	newPath := append([]int{}, path...)
 	for k := j; k > i; k-- {
@@ -74,18 +77,7 @@ func insert(path []int, i, j int) []int {
 	return newPath
 }
 
-//func (ts *TabuSearchSolver) isTabu(i, j, iter int) bool {
-//	if tabu, ok := ts.tabuList[Move{i, j}]; ok {
-//		if tabu < iter {
-//			delete(ts.tabuList, Move{i, j})
-//			return false
-//		} else {
-//			return true
-//		}
-//	}
-//	return false
-//}
-
+// isTabu sprawdza, czy dany ruch jest w tabu dla danej iteracji
 func (ts *TabuSearchSolver) isTabu(i, j, iter int) bool {
 	if tabu, ok := ts.tabuList[Move{i, j}]; ok {
 		if tabu < iter {
@@ -98,6 +90,7 @@ func (ts *TabuSearchSolver) isTabu(i, j, iter int) bool {
 	return false
 }
 
+// TabuSearch rozwiązuje problem komiwojażera metodą przeszukiwania lokalnego
 func (ts *TabuSearchSolver) TabuSearch(startVertex int) (int, []int) {
 	currentPath := ts.generateInitialPermutation(startVertex)
 	bestPath := append([]int{}, currentPath...)

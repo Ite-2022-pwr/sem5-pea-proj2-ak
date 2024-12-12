@@ -2,7 +2,7 @@ package benchmark
 
 // Parametry testowania algorytmów
 const (
-	NumberOfGraphs = 50
+	NumberOfGraphs = 100
 	MinVertices    = 7
 	MaxVertices    = 8
 	Rounds         = 10

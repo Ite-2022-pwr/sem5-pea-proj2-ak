@@ -5,7 +5,9 @@ import (
 	"log"
 	"path/filepath"
 	"pea2/atsp"
+	"pea2/generator"
 	"pea2/utils"
+	"runtime/debug"
 )
 
 var coolingRates = []float64{0.975, 0.95, 0.75}
@@ -123,4 +125,56 @@ func TestSimulatedAnnealingCoolingRates() {
 			}
 		}
 	}
+}
+
+func TestSimulatedAnnealingBestParams() {
+	prompt := "Simulated Annealing"
+
+	for filename, optimalCost := range OptimalSolutions {
+		G, err := utils.ReadGraphFromFile(filepath.Join(InputDirectory, filename))
+		if err != nil {
+			log.Fatal(utils.RedColor(err))
+		}
+
+		var result [][]string
+		for r := 0; r < Rounds; r++ {
+			log.Println(utils.BlueColor(fmt.Sprintf("SA best, test: %d/%d", r+1, Rounds)))
+			tsp := atsp.NewSimulatedAnnealingSolver(G, 0.975, 1e-12, 9000, 4000)
+			elapsed, cost := MeasureSolveTimeWithCost(tsp, prompt)
+			result = append(result, []string{
+				fmt.Sprintf("%d", cost),
+				fmt.Sprintf("%d", CalculateError(cost, optimalCost)),
+				fmt.Sprintf("%.3f", elapsed/1000000000.0),
+			})
+			utils.SaveCSV(filepath.Join(OutputDirectory, fmt.Sprintf("SA_CR_%v_best.csv", filename)), result)
+		}
+	}
+}
+
+func TestSimulatedAnnealingLimit() {
+	promptSA := utils.BlueColor("Simulated Annealing")
+
+	totalTimeSA := 0.0      // zmienne do przechowywania czasu rozwiązania
+	var resultSA [][]string // wyniki
+
+	log.Println(utils.BlueColor("[+] Rozpoczynanie testowania Algorytmów"))
+	for numOfCities := 600; numOfCities <= 1000; numOfCities += 100 {
+		for i := 0; i < NumberOfGraphs; i++ {
+			log.Println(utils.BlueColor(fmt.Sprintf("Miast: %d, test: %d/%d", numOfCities, i+1, NumberOfGraphs)))
+			G, _ := generator.GenerateAdjacencyMatrix(numOfCities)
+			var tsp atsp.ATSP
+
+			tsp = atsp.NewSimulatedAnnealingSolver(G, 0.975, 1e-12, 9000, 4000)
+			totalTimeSA += MeasureSolveTime(tsp, promptSA)
+			debug.FreeOSMemory()
+		}
+
+		// średni czas dla każdego z algorytmów
+		avgTimeDP := totalTimeSA / float64(NumberOfGraphs)
+		resultSA = append(resultSA, []string{fmt.Sprintf("%d", numOfCities), fmt.Sprintf("%.3f", avgTimeDP/1000000000.0)})
+		utils.SaveCSV(filepath.Join(OutputDirectory, "simulated_annealing4.csv"), resultSA)
+		totalTimeSA = 0.0
+	}
+
+	utils.SaveCSV(filepath.Join(OutputDirectory, "simulated_annealing3.csv"), resultSA)
 }
